@@ -31,16 +31,19 @@ def get_all_links():
     return links
 
 
-def download_all_files(links):
+def download_all_files(links, username, password):
     num_of_links = len(links)
     link_number = iter(range(1, num_of_links + 1))
     with requests.Session() as s:
         request_data = {
             'Location': '',
-            'UserLogin': sys.argv[1],
-            'Password': sys.argv[2]
+            'UserLogin': username,
+            'Password': password
         }
         s.post('http://library.avsim.net/dologin.php', data=request_data)
+        if 'LibraryLogin' not in s.cookies: # we didn't log in properly
+            print('Login failed, please check credentials')
+            sys.exit(1)
         pool = Pool(3) # AVSim only allows 3 concurrent downloads
 
 
@@ -62,12 +65,17 @@ def download_all_files(links):
         results = pool.map(get_link, links)
         pool.close()
         pool.join()
-        bar.finish()
 
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:
-        print('Usage: woai <avsim username> <avsim password>')
-        sys.exit(1)
+        try:
+            input = raw_input
+        except NameError:
+            pass
+        username = input('AVSim username: ')
+        password = input('AVSim password: ')
+    else:
+        username, password = sys.argv[1:2]
     all_links = get_all_links()
-    download_all_files(all_links)
+    download_all_files(all_links, username, password)
